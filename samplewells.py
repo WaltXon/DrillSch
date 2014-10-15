@@ -40,7 +40,7 @@ def getAcres(low=0.0, high=400.0):
 def getWells(n=20, sdate = '2014-01-01', edate='2017-02-20'):
     wells = []
     for i in range(n):
-        wells.append({"name": getName(), "eur": getEUR(), "expdate": getExpDate(sdate, edate), "acloss": getAcres()})
+        wells.append({"name": getName(), "eur": getEUR(), "expdate": getExpDate(sdate, edate), "acloss": getAcres(), 'pref': [], 'scheduled': 'no'})
     return wells
 
 

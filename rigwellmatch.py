@@ -13,10 +13,20 @@ eur_cutoff = 5.0
 acloss_cuttoff = 45.0
 
 
-wells = sw.getWells()
+wells = pd.DataFrame.from_records(sw.getWells())
 sch = pd.DataFrame.from_records(rs.rigSchedule())
 
 print sch
 
+def setPrefs(wells, schedule):
+    for exp in wells.expdate:
+        for spud in schedule.spud:
+            if exp < spud:
+                wells.pref.append(spud)
 
+setPrefs(wells, sch)
 
+def stableMatching(wells, schedule):
+    #if     
+    #while 'empty' in [status for status in schedule.well]:
+    pass
