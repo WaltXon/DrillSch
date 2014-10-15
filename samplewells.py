@@ -8,9 +8,7 @@ Created on Tue Oct 14 09:20:46 2014
 import random
 import time
 import cPickle as pickle
-import numpy as np
-import pandas as pd
-import dateutil as du
+
 
 names = pickle.load( open( 'C:\Users\WaltN\Desktop\GitHub\DrillSch\sh.p', "rb" ) )
 
