@@ -48,6 +48,4 @@ def getWells(n=20, sdate = '2014-01-01', edate='2017-02-20'):
 
   
 
-eur_cutoff = 5.0
-acloss_cuttoff = 45.0
 

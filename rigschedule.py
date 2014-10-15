@@ -6,8 +6,6 @@ Created on Wed Oct 15 10:41:50 2014
 """
 
 import datetime
-import pandas as pd
-
 
 
 def rigSchedule(start_date='2014-10-14', cterm=12, drldays = 22): 
