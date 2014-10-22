@@ -12,12 +12,16 @@ import pandas as pd
 welldf = pd.DataFrame.from_records(sw.getWells())
 schdf = pd.DataFrame.from_records(rs.rigSchedule())
 
+def checkExp(wellid, posid):
+    if welldf.get_value(wellid, 'expdate') > schdf.get_value(posid, 'spud'):
+        return 'GOOD'
+    else: return 'BAD'
+
 def setPrefs(w, sch):
     for sid in sch.index: 
-        spud_date = sch.get_value(sid, 'spud')
         for wid in w.index:
             #print wid
-            if w.get_value(wid, 'expdate') > spud_date:
+            if checkExp(wid, sid) == 'GOOD':
                 #print('{0} < {1}'.format(w.get_value(wid, 'expdate'), spud_date))
                 current = w.get_value(wid, 'pref')
                 current.append(sid)
@@ -31,21 +35,29 @@ def rankWells(w, eur_cutoff = 5.0, acloss_cuttoff = 45.0):
         a = acloss/acloss_cuttoff
         w.set_value(wid, 'rank', int((e*.80 + a*.2)*100))
         
+def getEmpty(sch):
+    return [p for p in sch.index if sch.get_value(p, 'well') == 'empty']
 
-def stableMatching(wells, schedule):
-    wellsToSchedule = [w for w in wells.index if wells.get_value(w, 'pref') != []]
+def setOOB(wells):
     wellsOutOfBounds =  [w for w in wells.index if wells.get_value(w, 'pref') == []]
-    wellsScheduled = []
-    
     for oob in wellsOutOfBounds: 
         wells.set_value(oob, 'scheduled', 'OOB')
+    return wellsOutOfBounds
     
-    #while wellsToSchedule: #and sum(eurFromPreviousRun) > sum(eurFromPreviousPreviousRun)
-    #make sure imporovements to the EUR total are being made round to round
-        #print('wellsToSchedule = {0}'.format(wellsToSchedule))  
-        #if len([pp for pp in schedule.index if schedule.get_value(pp, 'well') == 'empty']) == 0:
-            #break
-    for pos in [p for p in schedule.index if schedule.get_value(p, 'well') == 'empty']:
+def getSchd(wells):
+    return [w for w in wells.index if wells.get_value(w, 'scheduled') == 'yes']
+def getOOB(wells):
+    return [w for w in wells.index if wells.get_value(w, 'scheduled') == 'OOB']
+def getNotSchd(wells):
+    return [w for w in wells.index if wells.get_value(w, 'scheduled') == 'no']
+        
+def greedyMatching(wells, sch):
+    
+    wellsOutOfBounds = getOOB(wells)
+    wellsToSchedule = getNotSchd(wells)
+    wellsScheduled = getSchd(wells) or []
+    
+    for pos in getEmpty(sch):
         #print('pos = {0}'.format(pos))            
         possibles = [w for w in wells.index if pos in wells.get_value(w, 'pref') and wells.get_value(w, 'scheduled') == 'no']
         #print('possibles = {0}'.format(possibles))
@@ -59,17 +71,48 @@ def stableMatching(wells, schedule):
             #print('candidate.index[0] = {0}'.format(candidate.index[0]))
             wells.set_value(candidate.index[0], 'scheduled', 'yes')
             wells.set_value(candidate.index[0], 'sch_id', pos)
-            schedule.set_value(pos, 'well', wells.get_value(candidate.index[0], 'name'))
+            sch.set_value(pos, 'well', wells.get_value(candidate.index[0], 'name'))
+            sch.set_value(pos, 'well_id', candidate.index[0])
             wellsScheduled.append(candidate.index[0])
             wellsToSchedule.remove(candidate.index[0])      
                 
-        #wellsScheduledDF = wells.iloc[wellsScheduled]
-        #wellsNotSchedueld = wells.iloc[wellsNotScheduled]
-        #wellsOutOfBounds = wells.iloc[wellsOutOfBounds]
-    report(wells, wellsScheduled, wellsOutOfBounds, wellsToSchedule)
-        #return (wellsScheduledDF, wellsNotScheduledDF, wellsOutOfBoundsDF)
+    report(wells)
+    return(wells, wellsScheduled, wellsOutOfBounds, wellsToSchedule)
+    
+def refineMatch(wells, sch):
+    wellsToSchedule = [w for w in wells.index if wells.get_value(w, 'scheduled') == 'no']
+    res = welldf.iloc[wellsToSchedule].sort(columns='rank', axis=0, ascending=True) #TRUE OR FALSE
+    print res
+    for wid in res.index:
+        print('')
+        print('wid = {0}'.format(wid))
+        prefs = res.get_value(wid, 'pref')
+        for pos in prefs:
+            print('pos = {0}'.format(pos))
+            swapee = sch.get_value(pos, 'well_id')
+            print('swapee = {0}'.format(swapee))
+            for empt in getEmpty(sch):
+                print('empt = {0}'.format(empt))
+                if checkExp(swapee, empt) == 'GOOD':
+                    sch.set_value(empt, 'well', sch.get_value(swapee, 'well'))
+                    sch.set_value(empt, 'well_id', swapee)
+                    sch.set_value(pos, 'well', sch.get_value(wid, 'well'))
+                    sch.set_value(pos, 'well_id', wid)
+                    wells.set_value(wid, 'sch_id', pos)
+                    wells.set_value(wid, 'scheduled', 'yes')
+                    wells.set_value(swapee, 'sch_id', empt)
+                    print("well {0} moved to position {1}".format(swapee, empt))
+                    print("well {0} moved to position {1}".format(wid, pos))
+                    break
+                else:
+                    continue#print("well {0} cannot be moved to position {1}".format(wid, pos))
         
-def report(df, wellsSch, wellsOOB, wellsNotSch):
+    report(wells)
+    
+def report(df):
+    wellsSch= getSchd(df)
+    wellsOOB= getOOB(df)
+    wellsNotSch= getNotSchd(df)
     wSch = df.iloc[wellsSch]
     wOOB = df.iloc[wellsOOB]
     wNotSch = df.iloc[wellsNotSch]
@@ -101,11 +144,21 @@ def report(df, wellsSch, wellsOOB, wellsNotSch):
     print(woSum)
     print('=========================================')
     
-    
+setOOB(welldf)
 setPrefs(welldf, schdf)
 rankWells(welldf)
 
-stableMatching(welldf, schdf)
+gm = greedyMatching(welldf, schdf)
+if len(checkEmpty(schdf)) > 0:
+    
+    print "additional scheduling needed..."
+    refineMatch(welldf, schdf)
+    
+
+#run a greedy matching
+#check to see if there are empty positions on the schedule
+#if so, check to see if the unscheduled wells will fit in the empty slot
+#if not, check to see if wells can be shifted to accomidate interting non scheduled wells.
 
 
 
