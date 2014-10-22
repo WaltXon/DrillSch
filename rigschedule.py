@@ -18,5 +18,5 @@ def rigSchedule(start_date='2014-10-14', cterm=12, drldays = 22):
     for x in range(0,periods):
         d =  d + datetime.timedelta(days=drldays)
         dates.append({'id': x+1, 'spud': d, 'well': 'empty'})
-    print dates
+    #print dates
     return dates

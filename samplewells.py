@@ -6,7 +6,7 @@ Created on Tue Oct 14 09:20:46 2014
 """
 
 import random
-import time
+import datetime
 import cPickle as pickle
 
 
@@ -29,10 +29,13 @@ def getEUR(low=5.0, high=20.0):
     ##Consider using np.random.normal() for a more accurate distribtion
 
 def getExpDate(start, end, time_format='%Y-%m-%d'):
-    stime = time.mktime(time.strptime(start,time_format))
-    etime = time.mktime(time.strptime(end,time_format))
-    ptime = stime + random.random() * (etime - stime)
-    return time.strftime(time_format, time.localtime(ptime))
+    sd = datetime.datetime.strptime(start, time_format)  
+    ed = datetime.datetime.strptime(end, time_format)  
+    year = random.choice(range(sd.year,ed.year))
+    month = random.choice(range(1, 12))
+    day = random.choice(range(1, 28))
+    expdate = datetime.datetime(year, month, day)
+    return expdate
     
 def getAcres(low=0.0, high=400.0):
     return random.randrange(low, high, 5.0)
@@ -40,7 +43,8 @@ def getAcres(low=0.0, high=400.0):
 def getWells(n=20, sdate = '2014-01-01', edate='2017-02-20'):
     wells = []
     for i in range(n):
-        wells.append({"name": getName(), "eur": getEUR(), "expdate": getExpDate(sdate, edate), "acloss": getAcres(), 'pref': [], 'scheduled': 'no'})
+        wells.append({"name": getName(), "eur": getEUR(), "expdate": getExpDate(sdate, edate), 
+        "acloss": getAcres(), 'pref': [], 'scheduled': 'no', 'rank': 0.0, 'sch_id': -1})
     return wells
 
 
