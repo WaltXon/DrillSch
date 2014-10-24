@@ -9,7 +9,7 @@ import rigschedule as rs
 import samplewells as sw
 import pandas as pd
 
-welldf = pd.DataFrame.from_records(sw.getWells())
+welldf = pd.DataFrame.from_records(sw.getWells(n=100, sdate = '2014-01-01', edate='2017-02-20'))
 schdf = pd.DataFrame.from_records(rs.rigSchedule())
 
 def checkExp(wellid, posid):
@@ -153,7 +153,8 @@ def report(df):
     print('')
     print('================REPORT==================')
     print('')
-    print("Max Possible Matches = {0}".format(len(wellsSch) + len(wellsNotSch)))    
+    print("No Wells To Match = {0}".format(len(wellsSch) + len(wellsNotSch)))    
+    print("Possible Schedule Positions = {0}".format(len(wellsSch) + len(wellsNotSch)))    
     print('')
     print("Wells Scheduled = {0}".format(len(wellsSch))) 
     print('')       
@@ -187,10 +188,19 @@ if len(getEmpty(schdf)) > 0:
     print('')
     print "additional scheduling needed..."
     refineMatchOuter(welldf, schdf)
-welldf['pref'].astype(str)
+
+def stringy(l):
+    if l != []:
+        #print l
+        return ', '.join(str(x) for x in l)
+    else: return ''
+
+welldf['pref_str'] = welldf.apply(lambda x: stringy(x['pref']), axis=1)
+
+welldf.drop('pref', axis=1, inplace=True) 
 scht = schdf[['well_id','spud']]
 merged = pd.merge(welldf, scht, left_index=True, right_on='well_id', how='left' ) #, axis=1, join='inner', join_axes=[welldf.index, schridx.index])
-#merged.to_excel(r'C:\Users\WaltN\Desktop\GitHub\DrillSch\result.xlsx')
+merged.to_excel(r'C:\Users\WaltN\Desktop\GitHub\DrillSch\result.xlsx')
 mgsort =  merged.sort(columns='spud', ascending=True)
 print mgsort
 #run a greedy matching
